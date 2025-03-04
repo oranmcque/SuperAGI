@@ -48,3 +48,18 @@ class TaskQueue:
     def get_status(self):
         return self.db.get(self.queue_name + "_status")
 
+    def add_branching_task(self, task: str, branch_id: int):
+        self.db.lpush(self.queue_name + f"_branch_{branch_id}", task)
+
+    def complete_branching_task(self, response, branch_id: int):
+        if len(self.get_branching_tasks(branch_id)) <= 0:
+            return
+        task = self.db.lpop(self.queue_name + f"_branch_{branch_id}")
+        self.db.lpush(self.completed_tasks + f"_branch_{branch_id}", str({"task": task, "response": response}))
+
+    def get_branching_tasks(self, branch_id: int):
+        return self.db.lrange(self.queue_name + f"_branch_{branch_id}", 0, -1)
+
+    def get_completed_branching_tasks(self, branch_id: int):
+        tasks = self.db.lrange(self.completed_tasks + f"_branch_{branch_id}", 0, -1)
+        return [eval(task) for task in tasks]

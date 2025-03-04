@@ -21,6 +21,7 @@ class IterationWorkflowStep(DBBaseModel):
         next_step_id (int): The ID of the next step in the workflow.
         history_enabled (bool): Indicates whether history is enabled for the step.
         completion_prompt (str): The completion prompt for the step.
+        branching_enabled (bool): Indicates whether branching is enabled for the step.
     """
 
     __tablename__ = 'iteration_workflow_steps'
@@ -35,6 +36,7 @@ class IterationWorkflowStep(DBBaseModel):
     next_step_id = Column(Integer)
     history_enabled = Column(Boolean)
     completion_prompt = Column(Text)
+    branching_enabled = Column(Boolean, default=False)
 
     def __repr__(self):
         """
@@ -99,7 +101,7 @@ class IterationWorkflowStep(DBBaseModel):
     @classmethod
     def find_or_create_step(self, session, iteration_workflow_id: int, unique_id: str,
                             prompt: str, variables: str, step_type: str, output_type: str,
-                            completion_prompt: str = "", history_enabled: bool = False):
+                            completion_prompt: str = "", history_enabled: bool = False, branching_enabled: bool = False):
         workflow_step = session.query(IterationWorkflowStep).filter(IterationWorkflowStep.unique_id == unique_id).first()
         if workflow_step is None:
             workflow_step = IterationWorkflowStep(unique_id=unique_id)
@@ -113,10 +115,8 @@ class IterationWorkflowStep(DBBaseModel):
         workflow_step.iteration_workflow_id = iteration_workflow_id
         workflow_step.next_step_id = -1
         workflow_step.history_enabled = history_enabled
+        workflow_step.branching_enabled = branching_enabled
         if completion_prompt:
             workflow_step.completion_prompt = completion_prompt
         session.commit()
         return workflow_step
-
-
-

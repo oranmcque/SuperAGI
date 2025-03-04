@@ -24,7 +24,7 @@ class AgentLlmMessageBuilder:
         self.organisation = Agent.find_org_by_agent_id(self.session, self.agent_id)
 
     def build_agent_messages(self, prompt: str, agent_feeds: list, history_enabled=False,
-                             completion_prompt: str = None):
+                             completion_prompt: str = None, branching_enabled=False):
         """ Build agent messages for LLM agent.
 
         Args:
@@ -32,6 +32,7 @@ class AgentLlmMessageBuilder:
             agent_feeds (list): The list of agent feeds.
             history_enabled (bool): Whether to use history or not.
             completion_prompt (str): The completion prompt to be used for generating the agent messages.
+            branching_enabled (bool): Whether to use branching logic for Tree of Thought (ToT).
         """
         token_limit = TokenCounter(session=self.session, organisation_id=self.organisation.id).token_limit(self.llm_model)
         max_output_token_limit = int(get_config("MAX_TOOL_TOKEN_LIMIT", 800))
@@ -42,7 +43,8 @@ class AgentLlmMessageBuilder:
             full_message_history = [{'role': agent_feed.role, 'content': agent_feed.feed, 'chat_id': agent_feed.id}
                                                 for agent_feed in agent_feeds]
             past_messages, current_messages = self._split_history(full_message_history,
-                                                              ((token_limit - base_token_limit - max_output_token_limit) // 4) * 3)
+                                                              ((token_limit - base_token_limit - max_output_token_limit) // 4) * 3,
+                                                              branching_enabled)
             if past_messages:
                 ltm_summary = self._build_ltm_summary(past_messages=past_messages,
                                                                    output_token_limit=(token_limit - base_token_limit - max_output_token_limit) // 4)
@@ -56,7 +58,7 @@ class AgentLlmMessageBuilder:
         self._add_initial_feeds(agent_feeds, messages)
         return messages
 
-    def _split_history(self, history: List, pending_token_limit: int) -> Tuple[List[BaseMessage], List[BaseMessage]]:
+    def _split_history(self, history: List, pending_token_limit: int, branching_enabled: bool) -> Tuple[List[BaseMessage], List[BaseMessage]]:
         hist_token_count = 0
         i = len(history)
         for message in reversed(history):
@@ -65,9 +67,20 @@ class AgentLlmMessageBuilder:
             hist_token_count += token_count
             if hist_token_count > pending_token_limit:
                 self._add_or_update_last_agent_feed_ltm_summary_id(str(history[i-1]['chat_id']))
+                if branching_enabled:
+                    return self._split_history_with_branching(history[:i], history[i:])
                 return history[:i], history[i:]
             i -= 1
         return [], history
+
+    def _split_history_with_branching(self, past_messages: List[BaseMessage], current_messages: List[BaseMessage]) -> Tuple[List[BaseMessage], List[BaseMessage]]:
+        # Implement branching logic for Tree of Thought (ToT)
+        # This is a placeholder implementation, you can customize it based on your requirements
+        branches = []
+        for message in past_messages:
+            if "branch" in message["content"]:
+                branches.append(message)
+        return branches, current_messages
 
     def _add_initial_feeds(self, agent_feeds: list, messages: list):
         if agent_feeds:
