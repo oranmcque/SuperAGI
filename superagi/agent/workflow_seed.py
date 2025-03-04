@@ -214,6 +214,15 @@ class AgentWorkflowSeed:
         AgentWorkflowStep.add_next_workflow_step(session, step2.id, step2.id)
         AgentWorkflowStep.add_next_workflow_step(session, step2.id, -1, "COMPLETE")
 
+    @classmethod
+    def build_tree_of_thought_agent(cls, session):
+        agent_workflow = AgentWorkflow.find_or_create_by_name(session, "Tree of Thought Workflow", "Tree of Thought Workflow")
+        step1 = AgentWorkflowStep.find_or_create_iteration_workflow_step(session, agent_workflow.id,
+                                                                         str(agent_workflow.id) + "_step1",
+                                                                         "Tree of Thought Agent-I", step_type="TRIGGER")
+        AgentWorkflowStep.add_next_workflow_step(session, step1.id, step1.id)
+        AgentWorkflowStep.add_next_workflow_step(session, step1.id, -1, "COMPLETE")
+
 
 class IterationWorkflowSeed:
     @classmethod
@@ -267,3 +276,14 @@ class IterationWorkflowSeed:
         output = AgentPromptTemplate.analyse_task()
         IterationWorkflowStep.find_or_create_step(session, iteration_workflow.id, "ab1",
                                                   output["prompt"], str(output["variables"]), "TRIGGER", "tools")
+
+    @classmethod
+    def build_tree_of_thought_agent(cls, session):
+        iteration_workflow = IterationWorkflow.find_or_create_by_name(session, "Tree of Thought Agent-I", "Tree of Thought Agent")
+        output = AgentPromptTemplate.get_super_agi_single_prompt()
+        IterationWorkflowStep.find_or_create_step(session, iteration_workflow.id, "tot1",
+                                                  output["prompt"],
+                                                  str(output["variables"]), "TRIGGER", "tools",
+                                                  history_enabled=True,
+                                                  completion_prompt="Determine which next tool to use, and respond using the format specified above:",
+                                                  branching_enabled=True)

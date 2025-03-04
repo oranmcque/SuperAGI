@@ -18,6 +18,10 @@ class ThinkingSchema(BaseModel):
         ...,
         description="Task description which needs reasoning.",
     )
+    branching_enabled: bool = Field(
+        default=False,
+        description="Flag to enable branching logic for Tree of Thought (ToT).",
+    )
 
 class ThinkingTool(BaseTool):
     """
@@ -45,12 +49,13 @@ class ThinkingTool(BaseTool):
         arbitrary_types_allowed = True
 
 
-    def _execute(self, task_description: str):
+    def _execute(self, task_description: str, branching_enabled: bool = False):
         """
         Execute the Thinking tool.
 
         Args:
             task_description : The task description.
+            branching_enabled : Flag to enable branching logic for Tree of Thought (ToT).
 
         Returns:
             Thought process of llm for the task
@@ -64,6 +69,8 @@ class ThinkingTool(BaseTool):
             metadata = {"agent_execution_id":self.agent_execution_id}
             relevant_tool_response = self.tool_response_manager.get_relevant_response(query=task_description,metadata=metadata)
             prompt = prompt.replace("{relevant_tool_response}",relevant_tool_response)
+            if branching_enabled:
+                prompt += "\nNote: Branching logic is enabled for this task."
             messages = [{"role": "system", "content": prompt}]
             result = self.llm.chat_completion(messages, max_tokens=self.max_token_limit)
             

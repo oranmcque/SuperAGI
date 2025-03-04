@@ -64,7 +64,7 @@ class AgentPromptBuilder:
 
     @classmethod
     def replace_main_variables(cls, super_agi_prompt: str, goals: List[str], instructions: List[str], constraints: List[str],
-                               tools: List[BaseTool], add_finish_tool: bool = True):
+                               tools: List[BaseTool], add_finish_tool: bool = True, branching_enabled: bool = False):
         """Replace the main variables in the super agi prompt.
 
         Args:
@@ -74,6 +74,7 @@ class AgentPromptBuilder:
             constraints (List[str]): The list of constraints.
             tools (List[BaseTool]): The list of tools.
             add_finish_tool (bool): Whether to add finish tool or not.
+            branching_enabled (bool): Whether to enable branching logic for Tree of Thought (ToT).
         """
         super_agi_prompt = super_agi_prompt.replace("{goals}", AgentPromptBuilder.add_list_items_to_string(goals))
         if len(instructions) > 0 and len(instructions[0]) > 0:
@@ -90,11 +91,15 @@ class AgentPromptBuilder:
         # logger.info(tools)
         tools_string = AgentPromptBuilder.add_tools_to_prompt(tools, add_finish_tool)
         super_agi_prompt = super_agi_prompt.replace("{tools}", tools_string)
+
+        if branching_enabled:
+            super_agi_prompt += "\nNote: Branching logic is enabled for this agent."
+
         return super_agi_prompt
 
     @classmethod
     def replace_task_based_variables(cls, super_agi_prompt: str, current_task: str, last_task: str,
-                                     last_task_result: str, pending_tasks: List[str], completed_tasks: list, token_limit: int):
+                                     last_task_result: str, pending_tasks: List[str], completed_tasks: list, token_limit: int, branching_enabled: bool = False):
         """Replace the task based variables in the super agi prompt.
 
         Args:
@@ -105,6 +110,7 @@ class AgentPromptBuilder:
             pending_tasks (List[str]): The list of pending tasks.
             completed_tasks (list): The list of completed tasks.
             token_limit (int): The token limit.
+            branching_enabled (bool): Whether to enable branching logic for Tree of Thought (ToT).
         """
         if "{current_task}" in super_agi_prompt:
             super_agi_prompt = super_agi_prompt.replace("{current_task}", current_task)
@@ -133,4 +139,8 @@ class AgentPromptBuilder:
                 if token_count > min(600, pending_tokens):
                     break
             super_agi_prompt = super_agi_prompt.replace("{task_history}", "\n" + final_output + "\n")
+
+        if branching_enabled:
+            super_agi_prompt += "\nNote: Branching logic is enabled for this agent."
+
         return super_agi_prompt
