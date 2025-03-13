@@ -13,7 +13,7 @@ services:
   celery:
     volumes:
       - "./:/app"
-      - "/data/coolify/applications/bk0swc0wwc4sww00gg84os4o/ext:/app/ext"
+      - "/data/coolify/applications/fc0ow4ogkc8c4k8kcswwww4c/ext/workspace:/app/ext"
     build: .
     depends_on:
       - super__redis
